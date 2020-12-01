@@ -1,9 +1,8 @@
 use std::error::Error;
 use std::fs;
 use std::path::Path;
-use std::collections::VecDeque;
 
-fn prepare_input(input: String) -> VecDeque<u32> {
+fn prepare_input(input: String) -> Vec<u32> {
     input
         .split('\n')
         .map(|x| (x.trim().parse::<u32>().unwrap_or(0)))
@@ -11,12 +10,11 @@ fn prepare_input(input: String) -> VecDeque<u32> {
 }
 
 pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
-    let mut arr: VecDeque<u32> = prepare_input(fs::read_to_string(Path::new("./data/day1.txt"))?);
-    while !arr.is_empty() {
-        let current = arr.pop_front().unwrap_or(0);
-        for elem in arr.iter() {
-            if elem + current == 2020 {
-                println!("Result is: {}", elem * current);
+    let arr = prepare_input(fs::read_to_string(Path::new("./data/day1.txt"))?);
+    for (index, first_num) in arr.iter().enumerate() {
+        for second_num in arr.iter().skip(index) {
+            if first_num + second_num == 2020 {
+                println!("Result is: {}", first_num * second_num);
                 return Ok(());
             }
         }
@@ -25,7 +23,7 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
-    let arr: VecDeque<u32> = prepare_input(fs::read_to_string(Path::new("./data/day1.txt"))?);
+    let arr = prepare_input(fs::read_to_string(Path::new("./data/day1.txt"))?);
     for (index, first_num) in arr.iter().enumerate() {
         for (index_2, second_num) in arr.iter().enumerate().skip(index) {
             for third_num in arr.iter().skip(index_2) {
