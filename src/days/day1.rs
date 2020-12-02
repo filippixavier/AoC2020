@@ -29,7 +29,7 @@ pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
             for third_num in arr.iter().skip(index_2) {
                 if first_num + second_num + third_num == 2020 {
                     println!("Result 2 is: {}", first_num * second_num * third_num);
-                    return Ok(())
+                    return Ok(());
                 }
             }
         }
