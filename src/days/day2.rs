@@ -12,7 +12,7 @@ struct PasswordCheck {
 fn prepare_input(input: String) -> Vec<PasswordCheck> {
     let reg: Regex = Regex::new(r"(\d+)-(\d+) (\w): (\w+)").unwrap();
     let lines = input.lines();
-    let mut values: Vec<PasswordCheck> = vec![];
+    let mut range: Vec<PasswordCheck> = vec![];
     for line in lines {
         for cap in reg.captures_iter(line) {
             let pwd_check = PasswordCheck {
@@ -23,10 +23,10 @@ fn prepare_input(input: String) -> Vec<PasswordCheck> {
                     cap[2].to_string().parse().unwrap(),
                 ],
             };
-            values.push(pwd_check);
+            range.push(pwd_check);
         }
     }
-    values
+    range
 }
 
 pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
@@ -43,6 +43,18 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
-    let _input = fs::read_to_string(Path::new("./data/day2.txt"))?;
+    let inputs = prepare_input(fs::read_to_string(Path::new("./data/day2.txt"))?);
+    let result = inputs
+        .iter()
+        .filter(|checker| {
+            let rule = &checker.rule.chars().next().unwrap();
+            let pwd = &checker.pwd.chars().collect::<Vec<char>>();
+            (&pwd[checker.range[0] - 1] == rule) ^ (&pwd[checker.range[1] - 1] == rule)
+        })
+        .count();
+    println!(
+        "With the correct rule, there is {} valid passwords in input",
+        result
+    );
     Ok(())
 }
