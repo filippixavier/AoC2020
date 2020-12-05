@@ -71,7 +71,7 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
         .into_iter()
         .map(|boarding| {
             let seat = boarding.find_seat();
-            return seat.0 * 8 + seat.1;
+            seat.0 * 8 + seat.1
         })
         .max()
         .unwrap();
@@ -82,5 +82,27 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    let boarding_passes = prepare_input(fs::read_to_string(Path::new("./data/day5.txt"))?);
+    let mut boarding_ids = boarding_passes
+        .into_iter()
+        .map(|boarding| {
+            let seat = boarding.find_seat();
+            seat.0 * 8 + seat.1
+        })
+        .collect::<Vec<_>>();
+
+    boarding_ids.sort_unstable();
+
+    let mut my_seat = 0;
+
+    for i in 1..boarding_ids.len() {
+        if boarding_ids[i] - boarding_ids[i - 1] > 1 {
+            my_seat = boarding_ids[i] - 1;
+            break;
+        }
+    }
+
+    println!("I found my seat! It's {}", my_seat);
+
     Ok(())
 }
