@@ -59,6 +59,38 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
     Ok(())
 }
 
+fn deep_bag_search(
+    current_bag: String,
+    bags: &Bags,
+    memoized: &mut HashMap<String, usize>,
+) -> usize {
+    let mut bag_capacity = 0;
+
+    let bag = bags.get(&current_bag).unwrap();
+
+    for (holded, amount) in bag.iter() {
+        bag_capacity += match memoized.get(holded) {
+            Some(value) => amount * (value + 1),
+            None => {
+                let value = deep_bag_search(holded.clone(), bags, memoized);
+                memoized.insert(holded.clone(), value);
+                amount * (value + 1)
+            }
+        }
+    }
+
+    bag_capacity
+}
+
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    let bags = prepare_input(fs::read_to_string(Path::new("./data/day7.txt"))?);
+    let mut memory = HashMap::new();
+
+    let bag_of_holding = deep_bag_search(String::from("shiny gold"), &bags, &mut memory);
+
+    println!(
+        "With my marvelous shiny gold bag, I can hold {} bags!",
+        bag_of_holding
+    );
     Ok(())
 }
