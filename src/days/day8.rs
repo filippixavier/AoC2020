@@ -3,6 +3,7 @@ use std::error::Error;
 use std::fs;
 use std::path::Path;
 
+// Just keeping these lines to remember how to return a closure
 type Operation = Box<dyn Fn(isize, usize) -> (isize, usize)>;
 
 fn prepare_input(input: String) -> Vec<Operation> {
@@ -31,6 +32,40 @@ fn returns_closure(acc_increment: isize, line_increment: isize) -> Operation {
     })
 }
 
+#[derive(Debug, Clone)]
+struct Code {
+    instruction: Instruction,
+    arg_value: isize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum Instruction {
+    NOOP,
+    JMP,
+    ACC,
+}
+
+fn prepare_input_2(input: String) -> Vec<Code> {
+    let mut codes = vec![];
+
+    for line in input.trim().lines() {
+        let code = line.split(' ').collect::<Vec<_>>();
+        let instruction = match code[0] {
+            "nop" => Instruction::NOOP,
+            "acc" => Instruction::ACC,
+            "jmp" => Instruction::JMP,
+            _ => unreachable!(),
+        };
+        let arg_value = code[1].parse::<isize>().unwrap();
+        codes.push(Code {
+            instruction,
+            arg_value,
+        })
+    }
+
+    codes
+}
+
 pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
     let code = prepare_input(fs::read_to_string(Path::new("./data/day8.txt"))?);
     let mut acc = 0;
@@ -51,6 +86,63 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
     Ok(())
 }
 
+fn exec(codes: Vec<Code>) -> Option<isize> {
+    use Instruction::*;
+
+    let mut acc = 0;
+    let mut line = 0;
+    let mut visited_line = HashSet::new();
+
+    loop {
+        if !visited_line.insert(line) {
+            return None;
+        }
+        if let Some(loc) = codes.get(line) {
+            match loc.instruction {
+                ACC => {
+                    acc += loc.arg_value;
+                    line += 1;
+                }
+                NOOP => {
+                    line += 1;
+                }
+                JMP => {
+                    let next_line = ((line as isize) + loc.arg_value) as usize;
+                    line = next_line;
+                }
+            }
+        } else {
+            return Some(acc);
+        }
+    }
+}
+
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    use Instruction::*;
+    let codes = prepare_input_2(fs::read_to_string(Path::new("./data/day8.txt"))?);
+
+    for (line, loc) in codes.iter().enumerate() {
+        if loc.instruction == ACC {
+            continue;
+        }
+        let mut fixed_code = codes.clone();
+        fixed_code[line] = match loc.instruction {
+            JMP => Code {
+                instruction: NOOP,
+                arg_value: loc.arg_value,
+            },
+            NOOP => Code {
+                instruction: JMP,
+                arg_value: loc.arg_value,
+            },
+            ACC => unreachable!(),
+        };
+
+        if let Some(acc_value) = exec(fixed_code) {
+            println!("Accumulator value after successful boot is: {}", acc_value);
+            break;
+        }
+    }
+
     Ok(())
 }
