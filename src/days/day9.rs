@@ -1,4 +1,3 @@
-use std::cmp;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
@@ -14,21 +13,18 @@ fn prepare_input(input: String) -> Vec<usize> {
         .collect()
 }
 
-pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
-    let values = prepare_input(fs::read_to_string(Path::new("./data/day9.txt"))?);
-    let mut preamble: HashSet<usize> = values.iter().take(RANGE).copied().collect();
-
+fn find_anomaly(input: &[usize]) -> (usize, usize) {
     let mut position = RANGE;
+    let mut preamble: HashSet<usize> = input.iter().take(RANGE).copied().collect();
 
-    while position < values.len() {
-        let current = values[position];
+    while position < input.len() {
+        let current = input[position];
         let mut is_valid = false;
         for preamble_value in preamble.iter() {
             if *preamble_value >= current {
                 continue;
             }
-            let value_to_check =
-                cmp::max(current, *preamble_value) - cmp::min(current, *preamble_value);
+            let value_to_check = current.max(*preamble_value) - current.min(*preamble_value);
             if preamble.contains(&value_to_check) {
                 is_valid = true;
                 break;
@@ -36,18 +32,71 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
         }
 
         if is_valid {
-            preamble.remove(&values[position - RANGE]);
+            preamble.remove(&input[position - RANGE]);
             preamble.insert(current);
             position += 1;
         } else {
-            println!("Value {} doesn't respect the code!", current);
-            break;
+            return (current, position);
         }
     }
+
+    (0, 0)
+}
+
+pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
+    let values = prepare_input(fs::read_to_string(Path::new("./data/day9.txt"))?);
+
+    let (anomaly, position) = find_anomaly(&values);
+
+    println!(
+        "Value {} at position {} doesn't respect the code!",
+        anomaly, position
+    );
 
     Ok(())
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    use std::cmp::Ordering::*;
+    let values = prepare_input(fs::read_to_string(Path::new("./data/day9.txt"))?);
+
+    let (anomaly, position) = find_anomaly(&values);
+
+    let candidates = values.iter().take(position).copied().collect::<Vec<_>>();
+
+    let mut range = (0, 1);
+    let mut sum = candidates[0] + candidates[1];
+
+    loop {
+        match sum.cmp(&anomaly) {
+            Greater => {
+                sum -= candidates[range.0];
+                range.0 += 1;
+                if range.0 > range.1 {
+                    range.1 = range.0;
+                    sum = candidates[range.0];
+                }
+            }
+            Less => {
+                range.1 += 1;
+                sum += candidates[range.1];
+            }
+            Equal => {
+                let encryption_weakpoint = candidates
+                    .iter()
+                    .skip(range.0)
+                    .take(range.1 - range.0 + 1)
+                    .copied()
+                    .collect::<Vec<_>>();
+                let (min, max) = (
+                    encryption_weakpoint.iter().min().unwrap(),
+                    encryption_weakpoint.iter().max().unwrap(),
+                );
+                println!("Encryption weakpoint value is {}", *min + *max);
+                break;
+            }
+        }
+    }
+
     Ok(())
 }
