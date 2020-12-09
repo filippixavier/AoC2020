@@ -61,8 +61,8 @@ pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
     let values = prepare_input(fs::read_to_string(Path::new("./data/day9.txt"))?);
 
     let (anomaly, position) = find_anomaly(&values);
-
-    let candidates = values.iter().take(position).copied().collect::<Vec<_>>();
+    
+    let candidates = &values[..position];
 
     let mut range = (0, 1);
     let mut sum = candidates[0] + candidates[1];
@@ -82,12 +82,7 @@ pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
                 sum += candidates[range.1];
             }
             Equal => {
-                let encryption_weakpoint = candidates
-                    .iter()
-                    .skip(range.0)
-                    .take(range.1 - range.0 + 1)
-                    .copied()
-                    .collect::<Vec<_>>();
+                let encryption_weakpoint = &candidates[range.0..=range.1];
                 let (min, max) = (
                     encryption_weakpoint.iter().min().unwrap(),
                     encryption_weakpoint.iter().max().unwrap(),
