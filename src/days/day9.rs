@@ -61,7 +61,7 @@ pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
     let values = prepare_input(fs::read_to_string(Path::new("./data/day9.txt"))?);
 
     let (anomaly, position) = find_anomaly(&values);
-    
+
     let candidates = &values[..position];
 
     let mut range = (0, 1);
