@@ -36,7 +36,7 @@ impl SeatsMap {
         result
     }
 
-    fn count_neighbors(&self, line: isize, col: isize) -> (usize, usize, usize) {
+    fn count_direct_neighbors(&self, line: isize, col: isize) -> (usize, usize, usize) {
         let mut count_empty = 0;
         let mut count_occupied = 0;
         let mut count_ground = 0;
@@ -57,6 +57,46 @@ impl SeatsMap {
                     Empty => count_empty += 1,
                     Ground => count_ground += 1,
                     Occupied => count_occupied += 1,
+                }
+            }
+        }
+
+        (count_empty, count_occupied, count_ground)
+    }
+
+    fn count_seen_neighbors(&self, line: isize, col: isize) -> (usize, usize, usize) {
+        let mut count_empty = 0;
+        let mut count_occupied = 0;
+        let mut count_ground = 0;
+        let neighbors = [
+            (-1, -1),
+            (-1, 0),
+            (-1, 1),
+            (0, -1),
+            (0, 1),
+            (1, -1),
+            (1, 0),
+            (1, 1),
+        ];
+
+        for neighbors in &neighbors {
+            let mut next_line = line + neighbors.0;
+            let mut next_col = col + neighbors.1;
+            while let Some(seat) = self.seats.get(&(next_line, next_col)) {
+                match seat {
+                    Empty => {
+                        count_empty += 1;
+                        break;
+                    }
+                    Occupied => {
+                        count_occupied += 1;
+                        break;
+                    }
+                    Ground => {
+                        count_ground += 1;
+                        next_line += neighbors.0;
+                        next_col += neighbors.1;
+                    }
                 }
             }
         }
@@ -123,13 +163,13 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 
                 match next_seats.get(&(line, col)).unwrap() {
                     Empty => {
-                        let (_, count_occupied, _) = seats.count_neighbors(line, col);
+                        let (_, count_occupied, _) = seats.count_direct_neighbors(line, col);
                         if count_occupied == 0 {
                             next_seats.insert((line, col), Occupied);
                         }
                     }
                     Occupied => {
-                        let (_, count_occupied, _) = seats.count_neighbors(line, col);
+                        let (_, count_occupied, _) = seats.count_direct_neighbors(line, col);
                         if count_occupied >= 4 {
                             next_seats.insert((line, col), Empty);
                         }
@@ -152,7 +192,7 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
     let (_, count_occupied, _) = seats.count_total();
 
     println!(
-        "Once everyone is settled, there is {} occupied",
+        "Once everyone is settled, there is {} seats occupied",
         count_occupied
     );
 
@@ -160,5 +200,51 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    let mut seats = prepare_input(fs::read_to_string(Path::new("./data/day11.txt"))?);
+    let mut previous_sig = seats.get_signature();
+
+    loop {
+        let mut next_seats = seats.seats.clone();
+
+        for i in 0..seats.lines {
+            for j in 0..seats.cols {
+                let line = i as isize;
+                let col = j as isize;
+
+                match next_seats.get(&(line, col)).unwrap() {
+                    Empty => {
+                        let (_, count_occupied, _) = seats.count_seen_neighbors(line, col);
+                        if count_occupied == 0 {
+                            next_seats.insert((line, col), Occupied);
+                        }
+                    }
+                    Occupied => {
+                        let (_, count_occupied, _) = seats.count_seen_neighbors(line, col);
+                        if count_occupied >= 5 {
+                            next_seats.insert((line, col), Empty);
+                        }
+                    }
+                    Ground => {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        seats.seats = next_seats;
+        let signature = seats.get_signature();
+        if signature == previous_sig {
+            break;
+        }
+        previous_sig = signature;
+    }
+
+    let (_, count_occupied, _) = seats.count_total();
+
+    println!(
+        "Once everyone is *REALLY* settled, there is {} seats occupied",
+        count_occupied
+    );
+
     Ok(())
 }
