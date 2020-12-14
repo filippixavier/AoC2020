@@ -5,32 +5,37 @@ use std::path::Path;
 
 struct BitMask {
     bit: u32,
-    sign: bool,
+    sign: Option<bool>,
 }
 
 enum Instruction {
     Mask(Vec<BitMask>),
-    Mem((usize, u64)),
+    Mem((u64, u64)),
 }
 
 impl BitMask {
     fn from_string(input: String) -> Vec<Self> {
         let mut result = vec![];
-        for (bit, sign) in input.trim().chars().rev().enumerate() {
+        for (bit, sign) in input.trim().chars().enumerate() {
             match sign {
                 '1' => {
                     result.push(BitMask {
                         bit: bit as u32,
-                        sign: true,
+                        sign: Some(true),
                     });
                 }
                 '0' => {
                     result.push(BitMask {
                         bit: bit as u32,
-                        sign: false,
+                        sign: Some(false),
                     });
                 }
-                'X' => {}
+                'X' => {
+                    result.push(BitMask {
+                        bit: bit as u32,
+                        sign: None,
+                    });
+                }
                 _ => unreachable!(),
             }
         }
@@ -41,12 +46,53 @@ impl BitMask {
         let bit = (2u64).pow(self.bit);
         let masked_value = value & bit;
         let mut result = value;
-        if self.sign && masked_value == 0 {
+
+        let sign = if let Some(sign) = self.sign {
+            sign
+        } else {
+            return value;
+        };
+
+        if sign && masked_value == 0 {
             result += bit;
-        } else if !self.sign && masked_value != 0 {
+        } else if !sign && masked_value != 0 {
             result -= bit;
         }
         result
+    }
+
+    fn apply_register(&self, value: String) -> String {
+        let sign = if let Some(sign) = self.sign {
+            sign
+        } else {
+            return value
+                .chars()
+                .enumerate()
+                .map(|(index, value)| {
+                    if index == self.bit as usize {
+                        'X'
+                    } else {
+                        value
+                    }
+                })
+                .collect();
+        };
+
+        if sign {
+            return value
+                .chars()
+                .enumerate()
+                .map(|(index, value)| {
+                    if index == self.bit as usize {
+                        '1'
+                    } else {
+                        value
+                    }
+                })
+                .collect();
+        }
+
+        value
     }
 }
 
@@ -67,7 +113,7 @@ fn prepare_input(input: String) -> Vec<Instruction> {
                 .split(']')
                 .next()
                 .unwrap()
-                .parse::<usize>()
+                .parse()
                 .unwrap();
             result.push(Instruction::Mem((register, value.parse().unwrap())));
         }
@@ -78,7 +124,7 @@ fn prepare_input(input: String) -> Vec<Instruction> {
 pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
     let instructions = prepare_input(fs::read_to_string(Path::new("./data/day14.txt"))?);
     let mut mask: Vec<BitMask> = vec![];
-    let mut registers: HashMap<usize, u64> = HashMap::new();
+    let mut registers: HashMap<u64, u64> = HashMap::new();
 
     for instruction in instructions {
         match instruction {
@@ -95,11 +141,68 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
         }
     }
 
-    println!("{}", registers.values().sum::<u64>());
+    println!(
+        "Sum of value should be: {}",
+        registers.values().sum::<u64>()
+    );
 
     Ok(())
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    let instructions = prepare_input(fs::read_to_string(Path::new("./data/day14.txt"))?);
+    let mut mask: Vec<BitMask> = vec![];
+    let mut registers: HashMap<u64, u64> = HashMap::new();
+
+    for instruction in instructions {
+        match instruction {
+            Instruction::Mem((register, value)) => {
+                let mut registers_bits = format!("{:036b}", register);
+                let mut positions: Vec<usize> = vec![];
+                for bit_mask in mask.iter() {
+                    registers_bits = bit_mask.apply_register(registers_bits);
+                }
+                let len = registers_bits.len() - 1;
+                let base_register = registers_bits
+                    .chars()
+                    .enumerate()
+                    .map(|(index, value)| {
+                        if value == 'X' {
+                            positions.push(len - index);
+                            return '0';
+                        }
+                        value
+                    })
+                    .collect::<String>();
+                let base_register = u64::from_str_radix(base_register.as_str(), 2).unwrap();
+
+                let num_of_permutations = (2usize).pow(positions.len() as u32);
+
+                for i in 0..num_of_permutations {
+                    let binary = format!("{:b}", i);
+                    let ones = binary
+                        .chars()
+                        .rev()
+                        .enumerate()
+                        .filter(|(_, value)| *value == '1')
+                        .map(|(index, _)| index)
+                        .collect::<Vec<_>>();
+                    let register = ones.iter().fold(0, |acc, elem| {
+                        let val = positions[*elem];
+                        acc + (2u64).pow(val as u32)
+                    });
+                    registers.insert(base_register + register, value);
+                }
+            }
+            Instruction::Mask(new_mask) => {
+                mask = new_mask;
+            }
+        }
+    }
+
+    println!(
+        "Using the v2 algorithm, sum should be: {}",
+        registers.values().sum::<u64>()
+    );
     Ok(())
 }
