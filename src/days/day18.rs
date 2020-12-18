@@ -4,7 +4,6 @@ use std::path::Path;
 
 enum Operation {
     Plus,
-    Minus,
     Mul,
 }
 
@@ -43,9 +42,6 @@ fn do_recursive_math(math: &[String], position: &mut usize) -> i64 {
             "+" => {
                 op = Plus;
             }
-            "-" => {
-                op = Minus;
-            }
             "*" => {
                 op = Mul;
             }
@@ -54,9 +50,6 @@ fn do_recursive_math(math: &[String], position: &mut usize) -> i64 {
                 match op {
                     Plus => {
                         result += rvalue;
-                    }
-                    Minus => {
-                        result -= rvalue;
                     }
                     Mul => {
                         result *= rvalue;
@@ -72,8 +65,54 @@ fn do_recursive_math(math: &[String], position: &mut usize) -> i64 {
                     Plus => {
                         result += rvalue;
                     }
-                    Minus => {
-                        result -= rvalue;
+                    Mul => {
+                        result *= rvalue;
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn do_weird_priorities_recursive_math(math: &[String], position: &mut usize) -> i64 {
+    let mut result = 0;
+    let mut op = Plus;
+    loop {
+        let element = if let Some(value) = math.get(*position) {
+            value.as_str()
+        } else {
+            return result;
+        };
+        *position += 1;
+        match element {
+            "+" => {
+                op = Plus;
+            }
+            "*" => {
+                let rvalue = do_weird_priorities_recursive_math(math, position);
+                result *= rvalue;
+            }
+            "(" => {
+                let rvalue = do_weird_priorities_recursive_math(math, position);
+                *position += 1;
+                match op {
+                    Plus => {
+                        result += rvalue;
+                    }
+                    Mul => {
+                        result *= rvalue;
+                    }
+                }
+            }
+            ")" => {
+                *position -= 1;
+                return result;
+            }
+            _ => {
+                let rvalue = element.parse::<i64>().unwrap();
+                match op {
+                    Plus => {
+                        result += rvalue;
                     }
                     Mul => {
                         result *= rvalue;
@@ -96,5 +135,13 @@ pub fn first_star() -> Result<(), Box<dyn Error + 'static>> {
 }
 
 pub fn second_star() -> Result<(), Box<dyn Error + 'static>> {
+    let maths = prepare_input(fs::read_to_string(Path::new("./data/day18.txt"))?);
+    let results: i64 = maths
+        .iter()
+        .map(|line| do_weird_priorities_recursive_math(line, &mut 0))
+        .sum();
+
+    println!("Sum of weird operations: {}", results);
+
     Ok(())
 }
